@@ -1,0 +1,48 @@
+<?php
+$data = [
+   'amount' => 500, // сумма
+   'currency' => "RUB", // валюта
+   'system_currency' => "USDT", // системная валюта всегда USDT 
+   'store_id' => 49, // номер мерча
+   'external_id' => "inv_123456",  // номер платежа
+   'payment_type' => 1, // 1 без выбора валюты/2 с выбором  
+   'description' => "Payment for order", // описание платежа
+   'success_url' => "https://example.com/success", // переход при успешной оплате
+   'cancel_url' => "https://example.com/cancel", // переход при отмене оплаты
+   'fail_url' => "https://example.com/fail" // переходит при неудачной оплате
+];
+
+$chh = curl_init();
+curl_setopt($chh, CURLOPT_URL, 'https://timeapi.io/api/Time/current/zone?timeZone=UTC' ); // Подключаемся к API для получения времени UTC. Можете использовать функцию date своего сервера
+curl_setopt($chh, CURLOPT_RETURNTRANSFER, true);
+$server_outputh = curl_exec($chh);
+curl_close ($chh);
+$time = json_decode($server_outputh, true);
+
+$d = $time[year].$time[month].$time[day];
+$v = $time[hour].substr($time[time],-2);
+$t = implode(':',[$d, $v]); // получаем формат yyyyMMdd:hhmm
+
+$message = json_encode($data).$t;
+$secretKey = '8edb358d08b40sdg32ed8849b11e8e2be7131f5bs3b7ca7e549cee3be4da2c3335acfc2ba8816b777bd8c8651300f759b249d5112fbd946a3b3ba0cbab3b385b6123cdas61'; // PrivateKey из личного кабинета
+
+$binarySecretKey = hex2bin($secretKey); // Convert the secret key from hexadecimal into binary
+
+$signature = sodium_crypto_sign_detached($message, $binarySecretKey); // Signature calculation
+
+$hexSignature = bin2hex($signature); // Conversion of the signature into a string in hexadecimal format
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://api.streampay.org/api/payment/create' );
+$headers = [ "signature: " . $hexSignature, ]; 
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$server_output = curl_exec($ch);
+curl_close ($ch);
+
+$answer = json_decode($server_output, true); // Выводим ответ сервиса
+$link = $answer['data']['pay_url']; // Получаем ссылку на оплату
+header('Location: '.$link); // Перенаправляем пользователя на оплату
+exit();
