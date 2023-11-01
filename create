@@ -19,7 +19,7 @@ $server_outputh = curl_exec($chh);
 curl_close ($chh);
 $time = json_decode($server_outputh, true);
 
-$d = $time[year].$time[month].$time[day];
+$d = $time[year].substr($time[date],0,-8).substr($time[date],3,-5); //год. месяц. день в формате yyyyMMdd
 $v = $time[hour].substr($time[time],-2);
 $t = implode(':',[$d, $v]); // получаем формат yyyyMMdd:hhmm
 
